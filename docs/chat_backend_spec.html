@@ -1,0 +1,414 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Troond Chat System - Backend Specification</title>
+  <style>
+    @page {
+      size: A4;
+      margin: 18mm 16mm 18mm 16mm;
+    }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+      color: #1f2937;
+      line-height: 1.5;
+      font-size: 13px;
+      margin: 0;
+      padding: 0;
+      background: #ffffff;
+    }
+    .header {
+      border-bottom: 3px solid #ff6a00;
+      padding-bottom: 12px;
+      margin-bottom: 20px;
+    }
+    .header h1 {
+      margin: 0 0 6px 0;
+      font-size: 24px;
+      color: #111827;
+      font-weight: 700;
+    }
+    .header .subtitle {
+      color: #4b5563;
+      font-size: 13px;
+    }
+    .badge {
+      display: inline-block;
+      padding: 2px 8px;
+      border-radius: 4px;
+      font-size: 11px;
+      font-weight: 600;
+      text-transform: uppercase;
+      background: #fff2eb;
+      color: #ff6a00;
+      border: 1px solid #ffd8bf;
+      margin-right: 6px;
+    }
+    h2 {
+      color: #111827;
+      font-size: 16px;
+      border-left: 4px solid #ff6a00;
+      padding-left: 10px;
+      margin-top: 22px;
+      margin-bottom: 10px;
+      page-break-after: avoid;
+    }
+    h3 {
+      color: #1f2937;
+      font-size: 14px;
+      margin-top: 14px;
+      margin-bottom: 6px;
+      page-break-after: avoid;
+    }
+    p, ul, ol {
+      margin-top: 4px;
+      margin-bottom: 8px;
+    }
+    ul {
+      padding-left: 20px;
+    }
+    li {
+      margin-bottom: 3px;
+    }
+    pre {
+      background: #f8fafc;
+      border: 1px solid #e2e8f0;
+      border-radius: 6px;
+      padding: 10px;
+      font-family: "Cascadia Code", "Fira Code", Consolas, "Courier New", monospace;
+      font-size: 11px;
+      overflow-x: auto;
+      margin: 6px 0 12px 0;
+      page-break-inside: avoid;
+      line-height: 1.4;
+      color: #0f172a;
+    }
+    code {
+      font-family: "Cascadia Code", Consolas, monospace;
+      background: #f1f5f9;
+      color: #e11d48;
+      padding: 1px 4px;
+      border-radius: 3px;
+      font-size: 11.5px;
+    }
+    pre code {
+      background: transparent;
+      color: inherit;
+      padding: 0;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 10px 0 14px 0;
+      font-size: 12px;
+      page-break-inside: avoid;
+    }
+    th, td {
+      border: 1px solid #e5e7eb;
+      padding: 6px 10px;
+      text-align: left;
+    }
+    th {
+      background-color: #f9fafb;
+      font-weight: 600;
+      color: #374151;
+    }
+    .method {
+      display: inline-block;
+      padding: 2px 6px;
+      border-radius: 4px;
+      font-weight: 700;
+      font-size: 11px;
+      font-family: monospace;
+    }
+    .method.post { background: #dcfce7; color: #15803d; }
+    .method.get { background: #dbeafe; color: #1d4ed8; }
+    .method.patch { background: #fef3c7; color: #b45309; }
+    .endpoint-card {
+      background: #ffffff;
+      border: 1px solid #e5e7eb;
+      border-radius: 6px;
+      padding: 10px 14px;
+      margin-bottom: 12px;
+      page-break-inside: avoid;
+    }
+    .endpoint-title {
+      font-weight: 600;
+      font-size: 13px;
+      margin-bottom: 4px;
+    }
+    .page-break {
+      page-break-before: always;
+    }
+    .footer {
+      margin-top: 25px;
+      padding-top: 10px;
+      border-top: 1px solid #e5e7eb;
+      font-size: 11px;
+      color: #9ca3af;
+      text-align: center;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="header">
+    <h1>📱 Troond Chat System — Backend API & Database Spec</h1>
+    <div class="subtitle">
+      <span class="badge">E-Commerce Platform</span>
+      <span class="badge">Version 1.0</span>
+      <span class="badge">English Spec</span>
+      &bull; Target: Backend Engineering Team
+    </div>
+  </div>
+
+  <h2>1. Overview & Flow</h2>
+  <p>The Troond Chat system facilitates direct 1-on-1 communication between an authenticated <strong>Customer</strong> and a <strong>Seller / Merchant</strong>.</p>
+  <ul>
+    <li><strong>Supported Message Types:</strong>
+      <ul>
+        <li><code>text</code>: Standard text messages.</li>
+        <li><code>product</code>: Contextual inquiry attached to a specific product (ID, title, price, photo).</li>
+        <li><code>image</code>: Photos uploaded from mobile camera or gallery (JPG, PNG, WebP).</li>
+        <li><code>voice</code>: Voice notes (M4A, AAC, MP3) with duration and audio waveform.</li>
+      </ul>
+    </li>
+    <li><strong>Message Lifecycle:</strong> <code>sending</code> &rarr; <code>sent</code> &rarr; <code>delivered</code> &rarr; <code>read</code></li>
+  </ul>
+
+  <h2>2. Database Schema (MySQL / PostgreSQL)</h2>
+
+  <h3>Table 1: <code>chats</code></h3>
+  <pre><code>CREATE TABLE `chats` (
+  `id` BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+  `customer_id` BIGINT UNSIGNED NOT NULL,
+  `seller_id` BIGINT UNSIGNED NOT NULL,
+  `product_id` BIGINT UNSIGNED NULL DEFAULT NULL COMMENT 'Initial product context if started from product page',
+  `last_message_id` BIGINT UNSIGNED NULL DEFAULT NULL,
+  `last_message_at` TIMESTAMP NULL DEFAULT NULL,
+  `unread_customer_count` INT UNSIGNED NOT NULL DEFAULT 0,
+  `unread_seller_count` INT UNSIGNED NOT NULL DEFAULT 0,
+  `status` ENUM('active', 'archived', 'blocked') NOT NULL DEFAULT 'active',
+  `created_at` TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP,
+  `updated_at` TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `unique_chat` (`customer_id`, `seller_id`),
+  INDEX `idx_customer_inbox` (`customer_id`, `last_message_at` DESC),
+  INDEX `idx_seller_inbox` (`seller_id`, `last_message_at` DESC)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;</code></pre>
+
+  <h3>Table 2: <code>chat_messages</code></h3>
+  <pre><code>CREATE TABLE `chat_messages` (
+  `id` BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+  `chat_id` BIGINT UNSIGNED NOT NULL,
+  `sender_id` BIGINT UNSIGNED NOT NULL,
+  `sender_type` ENUM('customer', 'seller') NOT NULL DEFAULT 'customer',
+  `type` ENUM('text', 'image', 'voice', 'product') NOT NULL DEFAULT 'text',
+  `content` TEXT NULL DEFAULT NULL,
+  `product_id` BIGINT UNSIGNED NULL DEFAULT NULL,
+  `file_url` VARCHAR(2048) NULL DEFAULT NULL COMMENT 'Public URL for image or voice note',
+  `voice_duration` INT UNSIGNED NULL DEFAULT NULL COMMENT 'Duration in seconds',
+  `waveform` JSON NULL DEFAULT NULL COMMENT 'Normalized amplitude values [0.0 - 1.0]',
+  `status` ENUM('sending', 'sent', 'delivered', 'read') NOT NULL DEFAULT 'sent',
+  `read_at` TIMESTAMP NULL DEFAULT NULL,
+  `created_at` TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  INDEX `idx_chat_history` (`chat_id`, `created_at` DESC, `id` DESC),
+  CONSTRAINT `fk_messages_chat` FOREIGN KEY (`chat_id`) REFERENCES `chats` (`id`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;</code></pre>
+
+  <div class="page-break"></div>
+
+  <h2>3. RESTful API Endpoints</h2>
+  <p><strong>Base URL:</strong> <code>https://api.troond.com/api/</code> &bull; <strong>Header:</strong> <code>Authorization: Bearer &lt;USER_TOKEN&gt;</code></p>
+
+  <div class="endpoint-card">
+    <div class="endpoint-title"><span class="method post">POST</span> <code>/api/customer/chats</code> — Initialize or Get Existing Chat</div>
+    <p>Retrieves an existing chat between customer and seller, or creates a new one.</p>
+    <strong>Request:</strong>
+    <pre><code>{
+  "seller_id": 14,
+  "product_id": 1025
+}</code></pre>
+    <strong>Response (200 / 201):</strong>
+    <pre><code>{
+  "status": true,
+  "data": {
+    "id": 85,
+    "seller_id": 14,
+    "seller": {
+      "id": 14,
+      "name": "Smart Tech Store",
+      "logo": "https://api.troond.com/storage/sellers/14.png",
+      "rating": 4.8,
+      "rating_count": 28,
+      "is_verified": true,
+      "is_online": true
+    },
+    "product": {
+      "id": 1025,
+      "title": "Wireless Pro Headphones",
+      "price": "249.00 SAR",
+      "image": "https://api.troond.com/storage/products/1025.jpg"
+    },
+    "unread_count": 0
+  }
+}</code></pre>
+  </div>
+
+  <div class="endpoint-card">
+    <div class="endpoint-title"><span class="method get">GET</span> <code>/api/customer/chats/{chat_id}/messages</code> — Fetch Chat Messages</div>
+    <strong>Response (200 OK):</strong>
+    <pre><code>{
+  "status": true,
+  "data": [
+    {
+      "id": 401,
+      "chat_id": 85,
+      "sender_id": 501,
+      "is_me": true,
+      "type": "text",
+      "content": "Hello, is this item available?",
+      "file_url": null,
+      "voice_duration": null,
+      "status": "read",
+      "created_at": "2026-10-26T10:05:00Z"
+    }
+  ]
+}</code></pre>
+  </div>
+
+  <div class="endpoint-card">
+    <div class="endpoint-title"><span class="method post">POST</span> <code>/api/customer/chats/{chat_id}/messages</code> — Send Text Message</div>
+    <strong>Request:</strong>
+    <pre><code>{
+  "content": "Can you provide a discount for 2 items?",
+  "type": "text",
+  "product_id": 1025
+}</code></pre>
+    <strong>Response (201 Created):</strong>
+    <pre><code>{
+  "status": true,
+  "data": {
+    "id": 403,
+    "chat_id": 85,
+    "sender_id": 501,
+    "type": "text",
+    "content": "Can you provide a discount for 2 items?",
+    "product_id": 1025,
+    "status": "sent",
+    "created_at": "2026-10-26T10:10:00Z"
+  }
+}</code></pre>
+  </div>
+
+  <div class="page-break"></div>
+
+  <div class="endpoint-card">
+    <div class="endpoint-title"><span class="method post">POST</span> <code>/api/customer/chats/{chat_id}/files</code> — Upload & Send Image (Multipart)</div>
+    <p><strong>Content-Type:</strong> <code>multipart/form-data</code> &bull; <strong>Fields:</strong> <code>file</code> (binary), <code>type="image"</code>, <code>caption</code> (optional string)</p>
+    <strong>Response (201 Created):</strong>
+    <pre><code>{
+  "status": true,
+  "data": {
+    "id": 404,
+    "chat_id": 85,
+    "sender_id": 501,
+    "type": "image",
+    "file_url": "https://api.troond.com/storage/chats/img_404.jpg",
+    "content": "Is this the exact model?",
+    "status": "sent",
+    "created_at": "2026-10-26T10:15:00Z"
+  }
+}</code></pre>
+  </div>
+
+  <div class="endpoint-card">
+    <div class="endpoint-title"><span class="method post">POST</span> <code>/api/customer/chats/{chat_id}/voice</code> — Upload & Send Voice Note (Multipart)</div>
+    <p><strong>Content-Type:</strong> <code>multipart/form-data</code> &bull; <strong>Fields:</strong> <code>voice</code> (binary .m4a/.aac), <code>duration</code> (int seconds), <code>type="voice"</code></p>
+    <strong>Response (201 Created):</strong>
+    <pre><code>{
+  "status": true,
+  "data": {
+    "id": 405,
+    "chat_id": 85,
+    "sender_id": 501,
+    "type": "voice",
+    "file_url": "https://api.troond.com/storage/chats/v_405.m4a",
+    "voice_duration": 14,
+    "waveform": [0.2, 0.4, 0.8, 0.6, 0.9, 0.3, 0.7, 0.5],
+    "status": "sent",
+    "created_at": "2026-10-26T10:18:00Z"
+  }
+}</code></pre>
+  </div>
+
+  <div class="endpoint-card">
+    <div class="endpoint-title"><span class="method patch">PATCH</span> <code>/api/customer/chats/{chat_id}/read</code> — Mark Messages as Read</div>
+    <strong>Response (200 OK):</strong>
+    <pre><code>{
+  "status": true,
+  "message": "Messages marked as read",
+  "unread_count": 0
+}</code></pre>
+  </div>
+
+  <h2>4. Real-Time WebSockets (Pusher / Reverb / Socket.io)</h2>
+  <p><strong>Private Channel:</strong> <code>private-chat.{chat_id}</code></p>
+  <table>
+    <thead>
+      <tr>
+        <th>Event Name</th>
+        <th>Trigger</th>
+        <th>Broadcast Payload</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><code>message.sent</code></td>
+        <td>When any participant sends a message</td>
+        <td>Full message JSON object (same as message response)</td>
+      </tr>
+      <tr>
+        <td><code>message.read</code></td>
+        <td>When recipient opens the chat</td>
+        <td><code>{"chat_id": 85, "read_by": 14, "read_at": "..."}</code></td>
+      </tr>
+      <tr>
+        <td><code>user.typing</code></td>
+        <td>When typing inside input box</td>
+        <td><code>{"chat_id": 85, "user_id": 501, "is_typing": true}</code></td>
+      </tr>
+      <tr>
+        <td><code>user.presence</code></td>
+        <td>When user connects or disconnects</td>
+        <td><code>{"user_id": 14, "status": "online"}</code></td>
+      </tr>
+    </tbody>
+  </table>
+
+  <h2>5. Push Notifications (Firebase FCM)</h2>
+  <p>Triggered when recipient is not currently active in WebSocket (app in background or closed).</p>
+  <pre><code>{
+  "message": {
+    "token": "&lt;FCM_DEVICE_TOKEN&gt;",
+    "notification": {
+      "title": "Smart Tech Store",
+      "body": "Yes, it is in stock and ready for immediate shipping."
+    },
+    "data": {
+      "type": "chat_message",
+      "chat_id": "85",
+      "seller_id": "14",
+      "sender_name": "Smart Tech Store",
+      "click_action": "FLUTTER_NOTIFICATION_CLICK"
+    }
+  }
+}</code></pre>
+
+  <div class="footer">
+    Troond E-Commerce Platform &bull; Chat Backend Technical Specification &bull; October 2026
+  </div>
+
+</body>
+</html>
